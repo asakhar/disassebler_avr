@@ -104,4 +104,22 @@ def disassemble(filename):
           outargs.append(f'{args["X"]}(X threated as wildcard)')
       print(',\t'.join(outargs))
 
-disassemble("SP_6.hex")
+def print_err(file, e):
+  sys.stderr.write(f"Error: Failed to disassemble {file}!\n{e}\n")
+
+if __name__ == "__main__":
+  import sys
+  stdout = sys.stdout
+  for file in sys.argv[1:]:
+    try:
+      with open(file[::-1].replace('xeh.', '', 1)[::-1]+".asm", 'w') as f:
+        sys.stdout = f
+        try:
+          disassemble(file)
+        except Exception as e:
+          print_err(file, e)
+          continue
+    except (PermissionError, FileNotFoundError) as e:
+      print_err(file, e)
+      continue
+    stdout.write(f"Disassembled {file} to {file.replace('.hex', '.asm')}\n")
