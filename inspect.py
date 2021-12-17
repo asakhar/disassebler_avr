@@ -24,21 +24,23 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-operations = {}
-with open("commands.txt", 'r') as file:
-  lines = file.readlines()
-  for line in lines:
-    row = line.split('\t')
-    bits = ''.join(row[2].split(' | ')).replace(' ', '')
-    operations[bits] = row[1]
+def read_commands(filename):
+  operations = {}
+  with open(filename, 'r') as file:
+    lines = file.readlines()
+    for line in lines:
+      row = line.split('\t')
+      bits = ''.join(row[2].split(' | ')).replace(' ', '')
+      operations[bits] = row[1]
     # print(row)
+  return operations
 # print(operations)
 
 def tobinary(byte):
   binary = bin(int(byte, 16))[2:]
   return '0'*(8-len(binary))+binary
 
-def disassemble(filename):
+def disassemble(filename, operations):
   datas = ''
   with open(filename, 'r') as file:
     lines = file.readlines()
@@ -129,16 +131,33 @@ def print_err(file, e):
 if __name__ == "__main__":
   import sys
   stdout = sys.stdout
-  for file in sys.argv[1:]:
+  import argparse
+  parser = argparse.ArgumentParser(description='Get source code for intel hex files.')
+  parser.add_argument('files', metavar='FILES', type=open, nargs='+',
+                      help='hex files')
+  parser.add_argument('--intructions', dest="instr", nargs="?", help='provide the file containing instructions table')
+  parser.add_argument('-s', '--silent', dest='silent', help="Suppress output (not errors)", action="store_true")
+  args = parser.parse_args()
+  
+  instfile = './commands.txt'
+  if args.instr:
+    instfile = args.instr
+
+  operations = read_commands(instfile)
+
+  for filewrapper in args.files:
+    file = filewrapper.name
+    filewrapper.close()
     try:
       with open(file[::-1].replace('xeh.', '', 1)[::-1]+".asm", 'w') as f:
         sys.stdout = f
         try:
-          disassemble(file)
+          disassemble(file, operations)
         except Exception as e:
           print_err(file, e)
           continue
     except (PermissionError, FileNotFoundError) as e:
       print_err(file, e)
       continue
-    stdout.write(f"Disassembled {file} to {file.replace('.hex', '.asm')}\n")
+    if not args.silent:
+      stdout.write(f"Disassembled {file} to {file.replace('.hex', '.asm')}\n")
