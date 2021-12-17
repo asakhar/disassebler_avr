@@ -31,6 +31,8 @@ with open("commands.txt", 'r') as file:
     row = line.split('\t')
     bits = ''.join(row[2].split(' | ')).replace(' ', '')
     operations[bits] = row[1]
+    # print(row)
+# print(operations)
 
 def tobinary(byte):
   binary = bin(int(byte, 16))[2:]
@@ -59,6 +61,7 @@ def disassemble(filename):
   print("\n\n; DISASSEMBLY:\n")
   i = 0
   while i < len(datas):
+    opcode = None
     for opcode, opname in operations.items():
       args = {}
       resi = i
@@ -83,7 +86,7 @@ def disassemble(filename):
       name_args_req = opname.split(' ', 1)
       if len(name_args_req) == 1:
         print(opname)
-        continue
+        break
       name = name_args_req[0]
       args_req = name_args_req[1].split(', ')
       print(name, end='\t')
@@ -95,17 +98,33 @@ def disassemble(filename):
             nums = '1'+nums
           outargs.append(f'R{int(nums, 2)}')
         if ar[0] == 'K':
-          outargs.append(f'{int(args["K"], 2)} (=0b{args["K"]})')
+          outargs.append(f'{int(args["K"], 2)} ; (=0b{args["K"]})')
         if ar[0] == 'k':
-          outargs.append(f'{hex(int(args["k"], 2))} (=0b{args["k"]})')
+          outargs.append(f'{hex(int(args["k"], 2))} ; (=0b{args["k"]})')
         if ar[0] == 'P':
-          outargs.append(f'{hex(int(args["k"], 2))}')
+          outargs.append(f'{hex(int(args["P"], 2))}')
+        if ar[0] == 'Y':
+          outargs.append('Y')
+        if ar[0] == 'Z':
+          outargs.append('Z')
+        if ar[0] == 'D':
+          wregs = {'10':'Y','11':'X','00':'Z'}
+          outargs.append(f"{wregs[args['D']]}")
         if ar[0] == 'X':
-          outargs.append(f'{args["X"]}(X threated as wildcard)')
+          if not ('X' in args):
+            outargs.append('X')
+          else:
+            outargs.append(f'{args["X"]} ; (X threated as wildcard)')
       print(',\t'.join(outargs))
+      break
+    if i == resi:
+      sys.stderr.write(f"Cannot disassemble bytes: '{datas[i:i+32]}'\n")
+      raise Exception("No match")
+
 
 def print_err(file, e):
-  sys.stderr.write(f"Error: Failed to disassemble {file}!\n{e}\n")
+  import traceback
+  sys.stderr.write(f"Error: Failed to disassemble {file}!\n\t{type(e)}:{traceback.format_exc()}: {e}\n")
 
 if __name__ == "__main__":
   import sys
