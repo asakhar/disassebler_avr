@@ -124,9 +124,10 @@ def disassemble(filename, operations):
       raise Exception("No match")
 
 
-def print_err(file, e):
+def print_err(file):
   import traceback
-  sys.stderr.write(f"Error: Failed to disassemble {file}!\n\t{type(e)}:{traceback.format_exc()}: {e}\n")
+  nl = '\n'
+  sys.stderr.write(f"Error: Failed to disassemble {file}!\n\t{traceback.format_exc().split(nl)[-2]}\n")
 
 if __name__ == "__main__":
   import sys
@@ -137,6 +138,7 @@ if __name__ == "__main__":
                       help='hex files')
   parser.add_argument('--intructions', dest="instr", nargs="?", help='provide the file containing instructions table')
   parser.add_argument('-s', '--silent', dest='silent', help="Suppress output (not errors)", action="store_true")
+  parser.add_argument('-xs', '--totalsilent', dest='totalsilent', help="Suppress output and errors", action="store_true")
   args = parser.parse_args()
   
   instfile = './commands.txt'
@@ -154,10 +156,12 @@ if __name__ == "__main__":
         try:
           disassemble(file, operations)
         except Exception as e:
-          print_err(file, e)
+          if not args.totalsilent:
+            print_err(file)
           continue
     except (PermissionError, FileNotFoundError) as e:
-      print_err(file, e)
+      if not args.totalsilent:
+        print_err(file)
       continue
-    if not args.silent:
+    if not args.silent and not args.totalsilent:
       stdout.write(f"Disassembled {file} to {file.replace('.hex', '.asm')}\n")
